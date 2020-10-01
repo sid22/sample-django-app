@@ -100,4 +100,4 @@ if not DEBUG:
     # STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 NASA_API_URL = "https://api.nasa.gov/"
-NASA_API_KEY = "DEMO_KEY"
+NASA_API_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
