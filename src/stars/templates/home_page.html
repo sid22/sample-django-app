@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %} 
+<hr>
+<div style="padding: 1%;">
+    <div class="card">
+        <h5 class="card-header">{{ company_info.name }}</h5>
+        <div class="card-body">
+            <h5 class="card-title">Summary</h5>
+            <p class="card-text">{{ company_info.summary }}</p>
+            <a href="{{company_info.links.website }} " class="btn btn-primary">Website</a>
+        </div>
+        <div class="card-footer text-muted">
+            Headquarters: {{ company_info.headquarters.address }}, {{ company_info.headquarters.city }}, {{ company_info.headquarters.state }} 
+        </div>
+    </div>
+    <div class="card-deck">
+        <div class="card">
+            <img class="card-img-top" src="{{ iotd.url }}" alt="Card image cap">
+            <div class="card-body">
+            <h5 class="card-title">Astronomy Picture of the day - {{ iotd.title }}</h5>
+            <p class="card-text">{{ iotd.explanation }}, Copyright {{ iotd.copyright }} </p>
+            <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+            </div>
+        </div>
+        <div class="card">
+            <!-- <img lass="card-img-top" src="..." alt="Card image cap"> -->
+            <div id="wd_plot" style="width: 480px; height: 480px;"><!-- Plotly chart will be drawn inside this DIV --></div>
+            <div class="card-body">
+            <h5 class="card-title">Wind Rose Plot for last available sol on Mars</h5>
+            <div id="wd_most_common"><!-- Most common wind direction will be inside this DIV --></div>
+            <div id="summary"></div>
+            <!--<p class="card-text">This card has supporting text below as a natural lead-in to additional content.</p>
+            <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+            </div>
+        </div>
+        </div>
+    <hr>
+</div>
+<script>
+// Improved Javascript courtesy of Gemma Anible
+const nasa_api_key = 'DEMO_KEY';   // Replace with personal NASA API key
+const cpoints = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+var one_sol = true;
+//////////////////////////////////////////////////////////////////////
+// Retrieve Mars weather data from NASA API as JSON stream
+// - Write data for each Sol
+// - Write JSON stream
+//////////////////////////////////////////////////////////////////////
+$.get(
+        `https://api.nasa.gov/insight_weather/?feedtype=json&ver=1.0&api_key=${nasa_api_key}`,
+    data => {
+    data.sol_keys.forEach(sol => write_sol_data(sol, data[sol]));
+    $("#summary").append('<hr>');
+    }
+).always(
+    function(data) {
+    // Write JSON stream to #json PRE
+    $("#json").text(JSON.stringify(data, null, 2));
+    if (one_sol) {
+        plot_sol_data(one_sol, data[one_sol]);
+    }
+    }
+);
+//////////////////////////////////////////////////////////////////////
+// Function to write data for one Sol
+//////////////////////////////////////////////////////////////////////
+function write_sol_data(sol, sol_obj) {
+    // Summarize per-Sol temperature data to #summary DIV
+    $('#summary').append( `On Sol <b>${sol}</b> the temperatures ranged from <b>${Math.round(sol_obj.AT.mn)}&deg;C</b> to <b>${Math.round(sol_obj.AT.mx)}&deg;C</b> with an atmospheric pressure of <b>${Math.round(sol_obj.PRE.mn)} Pa</b> to <b>${Math.round(sol_obj.PRE.mx)} Pa</b>.<br>`);
+    one_sol = sol;
+    // Add per-Sol button to #buttons DIV
+    $('#buttons').append(
+        $('<button>')
+        .attr('id', sol)
+    .on('click', e => plot_sol_data(sol, sol_obj))
+    .text(sol)
+    );
+}
+//////////////////////////////////////////////////////////////////////
+// Plot Wind Direction (WD) data for one Sol to #wd_plot DIV
+//////////////////////////////////////////////////////////////////////
+function plot_sol_data(Sol, sol_obj) {
+    var wd_obj = sol_obj.WD;   // Wind direction object for Sol
+    // fill compass points with sol data
+    var vals = (new Array(16)).fill(0).map((empty, idx) => wd_obj[idx] ? wd_obj[idx].ct : 0);
+    var wd_data = [{               // Load WD data as one-element array
+    r: vals,
+    t: cpoints,
+    name: `Sol ${Sol}`,
+    marker: {color: 'rgb(0,127,127)'},
+    type: 'area'
+    }];
+    var wd_layout = {              // Load WD plot layout
+    font: {size: 16},
+    title: `     Wind Direction Distribution on Sol ${Sol} at InSight Mars landing site`,
+    legend: {font: {size: 16}},
+    radialaxis: {ticksuffix: ''},
+    orientation: 270
+    };
+    Plotly.newPlot('wd_plot', wd_data, wd_layout);     // Plot wind rose
+    // Add most common wind direction
+    $('#wd_most_common').html(`Most common wind direction is ${wd_obj.most_common ? wd_obj.most_common.compass_point : 'undefined'}<hr>`)
+}
+</script>
+{% endblock %}
