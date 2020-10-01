@@ -2,7 +2,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 
 import stars.rnasa as nasa
-
+from django.conf import settings
 
 # Create your views here.
 def status(request):
@@ -97,5 +97,5 @@ def home_page(request):
     return render(
         request,
         "home_page.html",
-        {"company_info": co_data, "iotd": iotd, "insight": ""},
+        {"company_info": co_data, "iotd": iotd, "nasa_api_key": settings.NASA_API_KEY},
     )
